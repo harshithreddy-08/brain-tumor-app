@@ -5,7 +5,6 @@ from tensorflow.keras.models import load_model
 from PIL import Image
 import time
 import base64
-import io
 
 # Load model
 model = load_model("vgg_model.h5")
@@ -53,9 +52,9 @@ with st.form("patient_form"):
 if submit:
     if uploaded_file is not None and name:
         st.markdown("### 🔍 Diagnosing...")
-        image = Image.open(uploaded_file).resize((224, 224))
+        image = Image.open(uploaded_file).convert("RGB").resize((224, 224))
         img_array = np.array(image) / 255.0
-        img_array = img_array.reshape(1, 224, 224, 3)
+        img_array = np.expand_dims(img_array, axis=0)  # Shape: (1, 224, 224, 3)
 
         prediction = model.predict(img_array)
         class_names = ["No Tumor", "Tumor"]
@@ -68,7 +67,7 @@ if submit:
         st.markdown("### 🧾 Diagnostic Report")
         st.image(image, caption="MRI Scan", use_column_width=True)
 
-        # --- Report Content ---
+        # Report HTML
         report_html = f"""
         <html>
         <head><style>
@@ -76,13 +75,15 @@ if submit:
                 font-family: Arial;
                 margin: 20px;
                 padding: 10px;
+                background-color: #f8f9fa;
+                color: #212529;
             }}
             h2 {{
-                color: #333;
+                color: #2c3e50;
             }}
             .highlight {{
                 font-weight: bold;
-                color: #444;
+                color: #2c3e50;
             }}
         </style></head>
         <body>
@@ -99,13 +100,14 @@ if submit:
         </html>
         """
 
-        # Display Report in Streamlit
+        # Display in Streamlit
         st.markdown(report_html, unsafe_allow_html=True)
         st.balloons()
 
-        # Downloadable Report
+        # Downloadable report
         b64 = base64.b64encode(report_html.encode()).decode()
-        href = f'<a href="data:text/html;base64,{b64}" download="medscan_report.html">📥 Download Report</a>'
+        href = f'<a href="data:text/html;base64,{b64}" download="medscan_report.html">📥 Download Diagnostic Report</a>'
         st.markdown(href, unsafe_allow_html=True)
     else:
         st.error("⚠️ Please fill all patient details and upload an image.")
+
